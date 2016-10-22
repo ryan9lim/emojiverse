@@ -2,7 +2,7 @@
     <string name="app_name">Emojiverse</string>
     <string name="button_emojify">Emojify</string>
     <string name="success_emojify">Emojify Complete</string>
-
+    <string name="send_to">Share images to...</string>
 
     <string name="button_save_gallery">Save to Gallery</string>
     <string name="button_save_server">Save to Server</string>
