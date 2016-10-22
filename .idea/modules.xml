@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Emojiverse.iml" filepath="$PROJECT_DIR$/Emojiverse.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/emojiverse.iml" filepath="$PROJECT_DIR$/emojiverse.iml" />
     </modules>
   </component>
 </project>
