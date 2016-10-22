@@ -7,6 +7,7 @@ import cv2
 import operator
 import numpy as np 
 import matplotlib.pyplot as plt 
+from get_emoji import get_emoji
 from PIL import Image
 
 # Variables
@@ -72,10 +73,10 @@ def draw_emoji(urlImage, faceList):
         center = (int(faceRect['left'] + (faceRect['width'] / 2)),
                   int(faceRect['top'] + (faceRect['height'] / 2)))
 
-        # emoji = cv2.imread(get_emoji(emotion))
-        emoji = cv2.imread('1f62c.png', -1)
+        path = './png/'
+        emoji = cv2.imread(path + get_emoji(emotion), -1)
+        # emoji = cv2.imread('1f62c.png', -1)
         (b,g,r,a) = cv2.split(emoji)
-        print(a[256][256])
 
         offset = int(0.45 * faceRect['width'])
 
@@ -84,14 +85,10 @@ def draw_emoji(urlImage, faceList):
 
         emoji = cv2.resize(emoji, (width, height))
 
-        yfrom = faceRect['top'] - (offset/2) 
-        yto = faceRect['top'] + emoji.shape[1] - (offset/2)
-        xfrom = faceRect['left'] - (offset/2) 
-        xto = faceRect['left'] + emoji.shape[0] - (offset/2)
-        print(xfrom, " ", xto)
-
-        print("img", img[yfrom:yto, xfrom:xto].shape)
-        print("emoji", emoji.shape)
+        yfrom = int(faceRect['top'] - (offset/2))
+        yto   = int(faceRect['top'] + emoji.shape[1] - (offset/2))
+        xfrom = int(faceRect['left'] - (offset/2))
+        xto   = int(faceRect['left'] + emoji.shape[0] - (offset/2))
 
         for c in range(0,3):
             img[yfrom:yto, xfrom:xto, c] = emoji[:,:,c] * (emoji[:,:,3]/255.0) +  img[yfrom:yto, xfrom:xto, c] * (1.0 - emoji[:,:,3]/255.0)
@@ -177,8 +174,9 @@ def drawFace(result, img):
                                        0.5, (255,0,0), 1)
 
 def main(urlImage):
-    urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
-    # urlImage = 'https://lh3.googleusercontent.com/lfQG0dOFvrE3b27b4OvEX4q6OkO5HKYM01Lzu4_E9nRBtMkMmgjBNQJLt3qXB6tpGgtYp-iC_j1GIGx4JpUVFzBCX-z15aArZm7h2PK8GsHz81uFMZ8girwdyYhdxvCj-mEplPUvoeHIgMnGUNsFXTGF3xs5fOtkuWkPglKi7UxSI-XL4eKYLeAYdLmQTA43jP9QULIQG84W99DbmL3KB5t5AarXAQ7bFVBIjz605JU5MDjT9MjFVWsTSmmF6ydVa3VXYhVohLULZU03PpRrcd3V7PAGS3_HstvvauDkQhv5evrS9U78eRewXWE1BDWXh5nQIdAKNxmhCTPOrMXCz3Kwe7_OAjxciYO0FkZY-bh5ZE8pnagOaCTe0BSL7eb1k1y8nvn7bnWizZR4z4hUu0Kd5_BGCaDjJq5cYyC7gVE4PmfKzc_wiGCO41Oz4Z_7TNzOo-oFsZ_EcKCPElOAKfT4qLH3mGQM3cn45po8DcK5e8-ppAN1Y08kAPWUB3k8driLB14hBs09a0mOT6m5InbyIQWxWgqKDeuUXHobCxpbmKIJCq8jHwGZUSsvqI2uwV2Ss3bkdqwZR51Dt1vHwilfTHhSc58o3Cef7S5aZgD51pmG=w1558-h1166-no'
+    # print(get_emoji('happiness'))
+    # urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
+    urlImage = 'https://lh3.googleusercontent.com/lfQG0dOFvrE3b27b4OvEX4q6OkO5HKYM01Lzu4_E9nRBtMkMmgjBNQJLt3qXB6tpGgtYp-iC_j1GIGx4JpUVFzBCX-z15aArZm7h2PK8GsHz81uFMZ8girwdyYhdxvCj-mEplPUvoeHIgMnGUNsFXTGF3xs5fOtkuWkPglKi7UxSI-XL4eKYLeAYdLmQTA43jP9QULIQG84W99DbmL3KB5t5AarXAQ7bFVBIjz605JU5MDjT9MjFVWsTSmmF6ydVa3VXYhVohLULZU03PpRrcd3V7PAGS3_HstvvauDkQhv5evrS9U78eRewXWE1BDWXh5nQIdAKNxmhCTPOrMXCz3Kwe7_OAjxciYO0FkZY-bh5ZE8pnagOaCTe0BSL7eb1k1y8nvn7bnWizZR4z4hUu0Kd5_BGCaDjJq5cYyC7gVE4PmfKzc_wiGCO41Oz4Z_7TNzOo-oFsZ_EcKCPElOAKfT4qLH3mGQM3cn45po8DcK5e8-ppAN1Y08kAPWUB3k8driLB14hBs09a0mOT6m5InbyIQWxWgqKDeuUXHobCxpbmKIJCq8jHwGZUSsvqI2uwV2Ss3bkdqwZR51Dt1vHwilfTHhSc58o3Cef7S5aZgD51pmG=w1558-h1166-no'
     faceList = analyze_face(urlImage, 'prod')
     draw_emoji(urlImage, faceList)
 
