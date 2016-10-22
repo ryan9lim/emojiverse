@@ -7,6 +7,7 @@ import cv2
 import operator
 import numpy as np 
 import matplotlib.pyplot as plt 
+from PIL import Image
 
 # Variables
 _url = 'https://api.projectoxford.ai/emotion/v1.0/recognize'
@@ -52,7 +53,16 @@ def analyze_face(urlImage, mode):
 def draw_emoji(urlImage, faceList):
     imgArr = np.asarray(bytearray(requests.get(urlImage).content), 
                         dtype=np.uint8)
-    img = cv2.imdecode(imgArr, -1)
+    img = cv2.imdecode(imgArr, 1)
+
+    b, g, r = cv2.split(img)
+    # b = b.astype(np.float)
+    # g = g.astype(np.float)
+    # r = r.astype(np.float)
+
+    a = np.ones((img.shape[0], img.shape[1])).astype(np.uint8) #creating a dummy alpha channel image.
+
+    img = cv2.merge((b, g, r, a))
 
     for face in faceList:
         faceRect = face['faceRectangle']
@@ -63,26 +73,42 @@ def draw_emoji(urlImage, faceList):
                   int(faceRect['top'] + (faceRect['height'] / 2)))
 
         # emoji = cv2.imread(get_emoji(emotion))
-        emoji = cv2.imread('1f62c.png')
-        offset = 50
+        emoji = cv2.imread('1f62c.png', -1)
+        (b,g,r,a) = cv2.split(emoji)
+        print(a[256][256])
+
+        offset = int(0.45 * faceRect['width'])
+
         (width, height) = (faceRect['width']  + offset, 
                            faceRect['height'] + offset)
 
-        print("before", emoji.shape)
         emoji = cv2.resize(emoji, (width, height))
-        print("after", emoji.shape)
 
-        xfrom = faceRect['top'] - (offset/2) 
-        xto = faceRect['top'] + emoji.shape[1] - (offset/2)
-        yfrom = faceRect['left'] - (offset/2) 
-        yto = faceRect['left'] + emoji.shape[0] - (offset/2)
+        yfrom = faceRect['top'] - (offset/2) 
+        yto = faceRect['top'] + emoji.shape[1] - (offset/2)
+        xfrom = faceRect['left'] - (offset/2) 
+        xto = faceRect['left'] + emoji.shape[0] - (offset/2)
+        print(xfrom, " ", xto)
 
-        img[xfrom:xto,yfrom:yto] = emoji
+        print("img", img[yfrom:yto, xfrom:xto].shape)
+        print("emoji", emoji.shape)
 
-        # cv2.imshow("", emoji)
-        cv2.imshow("pic", img)
+        for c in range(0,3):
+            img[yfrom:yto, xfrom:xto, c] = emoji[:,:,c] * (emoji[:,:,3]/255.0) +  img[yfrom:yto, xfrom:xto, c] * (1.0 - emoji[:,:,3]/255.0)
 
-    cv2.waitKey(0)
+
+        # # alpha = np.ones((emoji.shape[0],emoji.shape[1])) #* 50
+        # # emojiRGBA = cv2.merge((b,g,r,alpha))
+        # # print("test")
+
+
+
+        # img[xfrom:xto,yfrom:yto] = emoji
+
+        # cv2.imshow("pic", img)
+        # cv2.waitKey(0)
+
+    cv2.imwrite('test.jpg', img)
 
 
 # Helper functions
@@ -152,6 +178,7 @@ def drawFace(result, img):
 
 def main(urlImage):
     urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
+    # urlImage = 'https://lh3.googleusercontent.com/lfQG0dOFvrE3b27b4OvEX4q6OkO5HKYM01Lzu4_E9nRBtMkMmgjBNQJLt3qXB6tpGgtYp-iC_j1GIGx4JpUVFzBCX-z15aArZm7h2PK8GsHz81uFMZ8girwdyYhdxvCj-mEplPUvoeHIgMnGUNsFXTGF3xs5fOtkuWkPglKi7UxSI-XL4eKYLeAYdLmQTA43jP9QULIQG84W99DbmL3KB5t5AarXAQ7bFVBIjz605JU5MDjT9MjFVWsTSmmF6ydVa3VXYhVohLULZU03PpRrcd3V7PAGS3_HstvvauDkQhv5evrS9U78eRewXWE1BDWXh5nQIdAKNxmhCTPOrMXCz3Kwe7_OAjxciYO0FkZY-bh5ZE8pnagOaCTe0BSL7eb1k1y8nvn7bnWizZR4z4hUu0Kd5_BGCaDjJq5cYyC7gVE4PmfKzc_wiGCO41Oz4Z_7TNzOo-oFsZ_EcKCPElOAKfT4qLH3mGQM3cn45po8DcK5e8-ppAN1Y08kAPWUB3k8driLB14hBs09a0mOT6m5InbyIQWxWgqKDeuUXHobCxpbmKIJCq8jHwGZUSsvqI2uwV2Ss3bkdqwZR51Dt1vHwilfTHhSc58o3Cef7S5aZgD51pmG=w1558-h1166-no'
     faceList = analyze_face(urlImage, 'prod')
     draw_emoji(urlImage, faceList)
 
