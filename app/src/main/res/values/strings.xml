@@ -1,6 +1,15 @@
 <resources>
     <string name="app_name">Emojiverse</string>
+    <string name="button_emojify">Emojify</string>
+    <string name="success_emojify">Emojify Complete</string>
 
+
+    <string name="button_save_gallery">Save to Gallery</string>
+    <string name="button_save_server">Save to Server</string>
+    <string name="button_share">Share</string>
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
+
+    <string name="title_activity_image">ImageActivity</string>
+    <string name="title_activity_main">MainActivity</string>
 </resources>
