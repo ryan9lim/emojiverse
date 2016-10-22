@@ -1,60 +1,121 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+import time 
+import requests
+import cv2
+import operator
+import numpy as np 
+import matplotlib.pyplot as plt 
 
-import cognitive_face as CF
+# Variables
+_url = 'https://api.projectoxford.ai/emotion/v1.0/recognize'
+_key = '56abb73c70d649c395df24fe8c5f0d01'
+_maxNumRetries = 10
 
-# Subscription key for calling Cognitive Face API
-KEY = '715c880fd8b248a1a20d4ffe3a85d509'
-CF.Key.set(KEY)
+# Helper functions
+def processRequest(json, data, headers, params):
+    retries = 0
+    result = None
 
-# Time (in seconds) for sleep between each call to avoid exceeding quota.
-# Default to 3 as free subscription have limit of 20 calls per minute.
-TIME_SLEEP = 3
+    while True:
+        # get response
+        resp = requests.request('post', _url, 
+                                    json=json, data=data, 
+                                    headers=headers, params=params)
+        
+        print(resp.json())
 
-img_url = 'https://raw.githubusercontent.com/Microsoft/Cognitive-Face-Windows/master/Data/detection1.jpg'
-result = CF.face.detect(img_url)
-print(result)
+        # fields
+        lenf = 'content-length'
+        typef = 'content-type'
+
+        # rate limit exceeded
+        if resp.status_code == 429:
+            print("Message: %s" % (resp.json()['error']['message']))
+
+            if retries <= _maxNumRetries:
+                time.sleep(1)
+                retries += 1
+                continue
+            else:
+                print('Error: failed after retrying!')
+                break
+
+        # successful call
+        elif resp.status_code == 200 or resp.status_code == 201:
+            if lenf in resp.headers and int(resp.headers[lenf]) == 0:
+                result = None
+            elif typef in resp.headers and isinstance(resp.headers[typef], str):
+                if 'application/json' in resp.headers[typef].lower():
+                    result = resp.json() if resp.content else None
+                elif 'image' in resp.headers[typef].lower():
+                    result = resp.content
+
+        else:
+            print("Error code: %d" % (resp.status_code))
+            print("Message: %s" % (resp.json()['error']['message']))
+
+        break
+
+    return result
+
+def drawFace(result, img):
+    for face in result:
+        faceRect = face['faceRectangle']
+        cv2.rectangle(img, (faceRect['left'], 
+                            faceRect['top']), 
+                           (faceRect['left'] + faceRect['width'], 
+                            faceRect['top']  + faceRect['height']), 
+                           color=(255,0,0), thickness=5 )
+
+    for face in result:
+        faceRect = face['faceRectangle']
+        emotion = max(face['scores'].items(), 
+                      key=operator.itemgetter(1))[0]
+
+        textToWrite = "%s" % (emotion)
+        cv2.putText(img, textToWrite, (faceRect['left'], 
+                                       faceRect['top']-10),
+                                       cv2.FONT_HERSHEY_SIMPLEX,
+                                       0.5, (255,0,0), 1)
+
+def main():
+    urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
+    headers = dict()
+    headers['Ocp-Apim-Subscription-Key'] = _key
+    headers['Content-Type'] = 'application/json'
+
+    json = {'url': urlImage}
+    data = None
+    params = None
+
+    result = processRequest(json, data, headers, params)
+
+    if result is not None:
+        print("normal")
+        arr = np.asarray(bytearray(requests.get(urlImage).content), dtype=np.uint8)
+        # img = cv2.cvtColor(cv2.imdecode(arr, -1), cv2.COLOR_BGR2RGB)
+        img = cv2.imdecode(arr, -1)
+
+        drawFace(result, img)
+
+        ig, ax = plt.subplots(figsize=(15,20))
+        print(dir(ax))
+        cv2.imshow("", img)
+        # ax.show(img)
+
+    cv2.waitKey(0)
+    return None    
+
+if __name__ == "__main__":
+    main()
 
 
 
 
 
 
-# import argparse
-# import base64
-
-# from googleapiclient import discovery
-# from oauth2client.client import GoogleCredentials
-
-# def main(photo_file):
-#     """Run a label request on a single image"""
-
-#     credentials = GoogleCredentials.get_application_default()
-#     service = discovery.build('vision', 'v1', credentials=credentials)
-
-#     with open(photo_file, 'rb') as image:
-#         image_content = base64.b64encode(image.read())
-#         service_request = service.images().annotate(body={
-#             'requests': [{
-#                 'image': {
-#                     'content': image_content.decode('UTF-8')
-#                 },
-#                 'features': [{
-#                     'type': 'LABEL_DETECTION',
-#                     # 'type': 'TEXT_DETECTION',
-#                     'maxResults': 5
-#                 }]
-#             }]
-
-#         })
-#         response = service_request.execute()
-#         label = response['responses'][0]#['textAnnotations'][0]['description']
-#         print(label)
-#         # print('Found label: %s for %s' % (label, photo_file))
 
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('image_file', help="The image you\'d like to label.")
-#     args = parser.parse_args()
-#     main(args.image_file)
+
