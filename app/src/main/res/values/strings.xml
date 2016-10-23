@@ -5,6 +5,7 @@
     <string name="send_to">Share images to...</string>
 
     <string name="button_save_gallery">Save to Gallery</string>
+    <string name="toast_saved">Saved</string>
     <string name="button_save_server">Save to Server</string>
     <string name="button_share">Share</string>
     <string name="dummy_button">Dummy Button</string>

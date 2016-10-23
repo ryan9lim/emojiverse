@@ -25,8 +25,12 @@ import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.ExifInterface;
 import android.media.Image;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Environment;
 import android.os.SystemClock;
+import android.provider.MediaStore;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -44,11 +48,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -242,7 +249,7 @@ public class ImageActivity extends AppCompatActivity {
         String encodedImage = Base64.encodeToString(imageBytes, Base64.NO_WRAP);
         return encodedImage;
     }
-    void photoSuccess(Bitmap bitmap) {
+    void photoSuccess(final Bitmap bitmap) {
         if (dialogList.size() > 0)
             dialogList.get(0).dismiss();
         Toast.makeText(getApplicationContext(), getString(R.string.success_emojify), Toast.LENGTH_LONG).show();
@@ -250,15 +257,79 @@ public class ImageActivity extends AppCompatActivity {
         emojiButton.setVisibility(View.GONE);
         View onSuccessView = findViewById(R.id.on_success);
         onSuccessView.setVisibility(View.VISIBLE);
+
+
         Button shareButton = (Button) findViewById(R.id.button_share);
         shareButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                String imageFileName = "emojiverse_" + timeStamp + "_";
+                File storageDir = getCacheDir();
+                File image = null;
+                try {
+                    image = File.createTempFile(
+                            imageFileName,  /* prefix */
+                            ".jpg",         /* suffix */
+                            storageDir      /* directory */
+                    );
+                    FileOutputStream fOut = new FileOutputStream(image);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+                } catch (Exception e){
+                }
+                final String url = image.getAbsolutePath();
                 Intent shareIntent = new Intent();
                 shareIntent.setAction(Intent.ACTION_SEND);
-                shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://"+photo_url));
+                shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://"+url));
                 shareIntent.setType("image/jpeg");
                 startActivity(Intent.createChooser(shareIntent, getResources().getText(R.string.send_to)));
+            }
+        });
+        Button saveGalleryButton= (Button) findViewById(R.id.button_save_gallery);
+        saveGalleryButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                String imageFileName = "emojiverse_" + timeStamp + "_";
+                File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+                File image = null;
+                try {
+                    image = File.createTempFile(
+                            imageFileName,  /* prefix */
+                            ".jpg",         /* suffix */
+                            storageDir      /* directory */
+                    );
+                    FileOutputStream fOut = new FileOutputStream(image);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+                } catch (Exception e){
+                }
+
+                MediaScannerConnection.scanFile(ImageActivity.this, new String[] { image.getAbsolutePath()  }, new String[] { "image/jpeg" }, null);
+                Toast.makeText(getApplicationContext(), getString(R.string.toast_saved), Toast.LENGTH_LONG).show();
+            }
+        });
+        Button saveServerButton= (Button) findViewById(R.id.button_save_server);
+        saveServerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+//                String imageFileName = "emojiverse_" + timeStamp + "_";
+//                File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+//                File image;
+//                try {
+//                    image = File.createTempFile(
+//                            imageFileName,  /* prefix */
+//                            ".jpg",         /* suffix */
+//                            storageDir      /* directory */
+//                    );
+//                    FileOutputStream fOut = new FileOutputStream(image);
+//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+//                } catch (Exception e){
+//                    Log.e("error",e.toString());
+//                    Log.d("error","noooo");
+//                }
+                MediaStore.Images.Media.insertImage(getContentResolver(), bitmap,"title", "description");
+                Toast.makeText(getApplicationContext(), getString(R.string.toast_saved), Toast.LENGTH_LONG).show();
             }
         });
     }
