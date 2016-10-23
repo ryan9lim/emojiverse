@@ -2,6 +2,7 @@ package com.emojiverse.emojiverse;
 
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.NetworkError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -25,6 +26,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.media.ExifInterface;
 import android.media.Image;
 import android.net.Uri;
+import android.os.SystemClock;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -42,12 +44,22 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+
+import cz.msebera.android.httpclient.HttpEntity;
+import cz.msebera.android.httpclient.HttpResponse;
+import cz.msebera.android.httpclient.client.HttpClient;
+import cz.msebera.android.httpclient.client.methods.HttpGet;
+import cz.msebera.android.httpclient.entity.BufferedHttpEntity;
+import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -114,14 +126,14 @@ public class ImageActivity extends AppCompatActivity {
     void volleyRequest() {
         final Bitmap bitmap = ((BitmapDrawable) imageView.getDrawable()).getBitmap();
         emojiButton.setEnabled(false);
-        final ProgressDialog dialog = new ProgressDialog(ImageActivity.this);
+        final MyCustomProgressDialog dialog = new MyCustomProgressDialog(ImageActivity.this,R.style.MyTheme);
         dialogList.add(dialog);
         dialog.show();
         RequestQueue queue = Volley.newRequestQueue(ImageActivity.this);
         String url = "http://192.168.43.242:5000/get_image";
 
 //        JSONObject obj = new JSONObject();
-        String image = getStringImage(bitmap);
+//        String image = getStringImage(bitmap);
 //        try {
 ////            obj.put(KEY_IMAGE, image);
 //            obj.put("name", "Androidhive");
@@ -176,12 +188,14 @@ public class ImageActivity extends AppCompatActivity {
 
                 @Override
                 public void onResponse(String response) {
-                    dialog.dismiss();
-                    Toast.makeText(getApplicationContext(), getString(R.string.success_emojify), Toast.LENGTH_LONG).show();
-                    byte[] decodedString = Base64.decode(response, Base64.DEFAULT);
-                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                    imageView.setImageBitmap(decodedByte);
-                    photoSuccess(decodedByte);
+                    Log.d("response",response);
+                    new MyAsync(ImageActivity.this).execute(response);
+
+//                    Log.d("response",response);
+//                    BitmapFactory.Options options = new BitmapFactory.Options();
+//                    options.inJustDecodeBounds = false;
+//                    byte[] decodedString = Base64.decode(response, Base64.URL_SAFE);
+//                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length, options);
                 }
             }, new Response.ErrorListener() {
                 @Override
@@ -210,21 +224,29 @@ public class ImageActivity extends AppCompatActivity {
                 return params;
             }
         };
+        stringRequest.setRetryPolicy(new DefaultRetryPolicy(
+                60000,
+                0,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         // Add the request to the RequestQueue.
         queue.add(stringRequest);
 
     }
-    private void usePost(String image){
-        communicator.post(image);
-    }
+//    private void usePost(String image){
+//        communicator.post(image);
+//    }
     public String getStringImage(Bitmap bmp){
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        bmp.compress(Bitmap.CompressFormat.JPEG, 80, baos);
         byte[] imageBytes = baos.toByteArray();
-        String encodedImage = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+        String encodedImage = Base64.encodeToString(imageBytes, Base64.NO_WRAP);
         return encodedImage;
     }
     void photoSuccess(Bitmap bitmap) {
+        if (dialogList.size() > 0)
+            dialogList.get(0).dismiss();
+        Toast.makeText(getApplicationContext(), getString(R.string.success_emojify), Toast.LENGTH_LONG).show();
+        imageView.setImageBitmap(bitmap);
         emojiButton.setVisibility(View.GONE);
         View onSuccessView = findViewById(R.id.on_success);
         onSuccessView.setVisibility(View.VISIBLE);
