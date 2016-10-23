@@ -12,60 +12,73 @@ import operator
 import numpy as np 
 import matplotlib.pyplot as plt
 import base64
+import time
 
 # Variables
 _urlImgAPI = 'https://api.projectoxford.ai/emotion/v1.0/recognize'
 _urlVidAPI = 'https://api.projectoxford.ai/emotion/v1.0/recognizeinvideo'
-_key = '56abb73c70d649c395df24fe8c5f0d01'
+_imgKey = '56abb73c70d649c395df24fe8c5f0d01'
+_vidKey = '6d733f1bc1e14010ac21969564926a56'
 _maxNumRetries = 10
 _filename = 'user_image.png'
 _cloudPath = 'https://emojiverse2.blob.core.windows.net/imgstore/img'
+block_blob_service = None
 
 def emojify(imageData, numPics):
     # urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
     # urlImage = 'https://lh3.googleusercontent.com/lfQG0dOFvrE3b27b4OvEX4q6OkO5HKYM01Lzu4_E9nRBtMkMmgjBNQJLt3qXB6tpGgtYp-iC_j1GIGx4JpUVFzBCX-z15aArZm7h2PK8GsHz81uFMZ8girwdyYhdxvCj-mEplPUvoeHIgMnGUNsFXTGF3xs5fOtkuWkPglKi7UxSI-XL4eKYLeAYdLmQTA43jP9QULIQG84W99DbmL3KB5t5AarXAQ7bFVBIjz605JU5MDjT9MjFVWsTSmmF6ydVa3VXYhVohLULZU03PpRrcd3V7PAGS3_HstvvauDkQhv5evrS9U78eRewXWE1BDWXh5nQIdAKNxmhCTPOrMXCz3Kwe7_OAjxciYO0FkZY-bh5ZE8pnagOaCTe0BSL7eb1k1y8nvn7bnWizZR4z4hUu0Kd5_BGCaDjJq5cYyC7gVE4PmfKzc_wiGCO41Oz4Z_7TNzOo-oFsZ_EcKCPElOAKfT4qLH3mGQM3cn45po8DcK5e8-ppAN1Y08kAPWUB3k8driLB14hBs09a0mOT6m5InbyIQWxWgqKDeuUXHobCxpbmKIJCq8jHwGZUSsvqI2uwV2Ss3bkdqwZR51Dt1vHwilfTHhSc58o3Cef7S5aZgD51pmG=w1558-h1166-no'
     # analyze_video()
 
-    # fh = open(_filename, 'wb')
-    # fh.write(base64.b64decode(imageData))
-    # fh.close()
+    #----------------IMAGE----------------#
+    fh = open(_filename, 'wb')
+    print(type(imageData))
+    fh.write(base64.b64decode(imageData))
+    print(base64.b64decode(imageData))
+    fh.close()
 
     # img = cv2.imread('./user_image.png')
-    # img = cv2.resize(img, (int(0.7 * img.shape[0]), int(0.7 * img.shape[1])))
+    # img = cv2.resize(img, (int(0.7 * img.shape[1]), int(0.7 * img.shape[0])))
     # cv2.imwrite(_filename, img)
+    # cv2.imshow("img", img)
 
     print("before cloud")
     pushToCloud('./' + _filename, numPics)
     print("after cloud")
 
     faceList = analyze_face(_cloudPath + str(numPics) + '.png', 'prod')
-    emojifiedImage = draw_emoji(_cloudPath + str(numPics) + '.png', faceList)
 
-    # return imageData
+    #----------------NEW (Push result to cloud)
+    filename = draw_emoji(_cloudPath + str(numPics) + '.png', faceList, numPics)
+    return filename
+    #----------------OLD
+    # emojifiedImage = draw_emoji(_cloudPath + str(numPics) + '.png', faceList)
+    # return encodeImage
 
-def analyze_face(urlImage, mode):
-    # # happy
-    # urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
-    # # face not detected (side view)
-    # urlImage = 'http://static.businessinsider.com/image/53b5e16669bedda46e0122cb/image.jpg'
-    # # sad
-    
+
+    # cv2.imshow("emojified", emojifiedImage)
+    # encodeImage = base64.urlsafe_b64encode(emojifiedImage)
+    # encodeImage = base64.decodestring(encodeImage)
+    #----------------VIDEO----------------#
+    # analyze_video()
+    # return 0
+
+def analyze_face(urlImage, mode):    
     headers = dict()
-    headers['Ocp-Apim-Subscription-Key'] = _key
+    headers['Ocp-Apim-Subscription-Key'] = _imgKey
     headers['Content-Type'] = 'application/json'
 
     json = {'url': urlImage}
     data = None
     params = None
 
-    result = processRequest(json, _urlImgAPI, data, headers, params)
+    result = processImgRequest(json, _urlImgAPI, data, headers, params)
 
     if result is not None:
         if mode == 'test':
             print("face found")
             print(result)
-            # arr = np.asarray(bytearray(requests.get(urlImage).content), dtype=np.uint8)
-            # img = cv2.imdecode(arr, -1)
+
+            # img = cv2.imread(_filename)
             # drawFace(result, img)
             # cv2.imshow("", img)
             # cv2.waitKey(0)
@@ -76,7 +89,7 @@ def analyze_face(urlImage, mode):
 
 def analyze_video():
     headers = dict()
-    headers['Ocp-Apim-Subscription-Key'] = _key
+    headers['Ocp-Apim-Subscription-Key'] = _vidKey
 
     json = {}
     data = None
@@ -84,11 +97,12 @@ def analyze_video():
     params['outputStyle'] = 'aggregate'
     url = _urlVidAPI + '?outputStyle=aggregate'
 
-    print(url)
+    opLocation = processVidOpRequest(json, url, data, headers, params)
 
-    result = processRequest(json, url, data, headers, params)
+    json
 
-def draw_emoji(urlImage, faceList):
+
+def draw_emoji(urlImage, faceList, numPics):
     # imgArr = np.asarray(bytearray(requests.get(urlImage).content), 
     #                     dtype=np.uint8)
     # img = cv2.imdecode(imgArr, 1)
@@ -132,10 +146,25 @@ def draw_emoji(urlImage, faceList):
             img[yfrom:yto, xfrom:xto, c] = emoji[:,:,c] * (emoji[:,:,3]/255.0) +  img[yfrom:yto, xfrom:xto, c] * (1.0 - emoji[:,:,3]/255.0)
 
     cv2.imwrite('result.jpg', img)
-    return img
+
+    #-------------------NEW
+    print("before cloud")
+    block_blob_service.create_blob_from_path(
+        'imgstore',
+        'img' + str(numPics) + '.jpg',
+        'result.jpg',
+        content_settings=ContentSettings(content_type='image/jpg')
+    )
+    print("after cloud")
+    return ('https://emojiverse2.blob.core.windows.net/imgstore/img' + str(numPics) + '.jpg')
+
+    #------------------OLD
+    # return img
+
+
 
 # Helper functions
-def processRequest(json, url, data, headers, params):
+def processImgRequest(json, url, data, headers, params):
     retries = 0
     result = None
 
@@ -180,6 +209,47 @@ def processRequest(json, url, data, headers, params):
 
     return result
 
+def processVidOpRequest(json, url, data, headers, params):
+    retries = 0
+    result = None
+
+    while True:
+        # get response
+        resp = requests.request('post', url=url,
+                                    json=json, data=data, 
+                                    headers=headers, params=params)
+        
+        # fields
+        lenf = 'content-length'
+        typef = 'content-type'
+
+        # rate limit exceeded
+        if resp.status_code == 429:
+            print("Message: %s" % (resp.json()['error']['message']))
+
+            if retries <= _maxNumRetries:
+                time.sleep(1)
+                retries += 1
+                continue
+            else:
+                print('Error: failed after retrying!')
+                break
+
+        # successful call
+        elif resp.status_code == 202:
+            result = resp.headers['operation-location']
+            # print("header", resp.headers, "json", resp.json, "content", resp.content)
+
+        else:
+            print("Error code: %d" % (resp.status_code))
+            print("Message: %s" % (resp.json()['error']['message']))
+
+        break
+
+    return result
+
+# def processVidRecogRequest(json, url, data, headers, params):
+
 def drawFace(result, img):
     for face in result:
         faceRect = face['faceRectangle']
@@ -201,6 +271,7 @@ def drawFace(result, img):
                                        0.5, (255,0,0), 1)
 
 def pushToCloud(localPath, numPics):
+    global block_blob_service
     block_blob_service = BlockBlobService(account_name='emojiverse2',
         account_key='bsLnZdnBz5yppDuprvDNlnWNNLAFl4y6vcOiIz23NozQwLIqJQ12AYkqISdc/WyHVV4HYtGv+Y4b25q2JbmN5A==')
 
@@ -216,4 +287,4 @@ def pushToCloud(localPath, numPics):
 
     return 0
 
-emojify('./input', 0)
+# emojify(0, 0)
