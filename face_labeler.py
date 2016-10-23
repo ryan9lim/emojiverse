@@ -113,7 +113,7 @@ def draw_emoji(urlImage, faceList):
 
         path = './png/'
         emoji = cv2.imread(path + get_emoji(emotion), -1)
-        # emoji = cv2.imread('1f62c.png', -1)
+
         (b,g,r,a) = cv2.split(emoji)
 
         offset = int(0.45 * faceRect['width'])
