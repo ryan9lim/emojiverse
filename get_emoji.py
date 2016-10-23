@@ -73,9 +73,9 @@ def emotion_to_shortname(emotion):
             a = ":nerd:"
         elif .2 < r and r < .4:
             a = ":no_mouth:"
-        elif .4 < r and r < .6:
+        elif .4 < r and r < .7:
             a = ":neutral_face:"
-        elif .6 < r and r < .8:
+        elif .7 < r and r < .9:
             a = ":confused:"
         else:
             a = ":robot:"
