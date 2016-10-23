@@ -14,8 +14,15 @@ def get_image():
     image = request.form['image']
     # print(image)
 
-    emojified_image = emojify(image, _numPics)
+    #-----------------NEW
+    filename = emojify(image, _numPics)
     _numPics += 1
-    return image
+    return filename
+
+    #-----------------OLD
+    # emojified_image = emojify(image, _numPics)
+    # _numPics += 1
+
+    # return emojified_image
 
 app.run(host='0.0.0.0', debug=True, threaded=True)
