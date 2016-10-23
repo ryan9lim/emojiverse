@@ -1,21 +1,47 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from get_emoji import get_emoji
+from azure.storage.blob import BlockBlobService
+from azure.storage.blob import PublicAccess
+from azure.storage.blob import ContentSettings
 import time 
 import requests
 import cv2
 import operator
 import numpy as np 
-import matplotlib.pyplot as plt 
-from get_emoji import get_emoji
-from PIL import Image
+import matplotlib.pyplot as plt
+import base64
 
 # Variables
-_url = 'https://api.projectoxford.ai/emotion/v1.0/recognize'
+_urlImgAPI = 'https://api.projectoxford.ai/emotion/v1.0/recognize'
+_urlVidAPI = 'https://api.projectoxford.ai/emotion/v1.0/recognizeinvideo'
 _key = '56abb73c70d649c395df24fe8c5f0d01'
 _maxNumRetries = 10
+_filename = 'user_image.png'
+_cloudPath = 'https://emojiverse2.blob.core.windows.net/imgstore/img'
 
+def emojify(imageData, numPics):
+    # urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
+    # urlImage = 'https://lh3.googleusercontent.com/lfQG0dOFvrE3b27b4OvEX4q6OkO5HKYM01Lzu4_E9nRBtMkMmgjBNQJLt3qXB6tpGgtYp-iC_j1GIGx4JpUVFzBCX-z15aArZm7h2PK8GsHz81uFMZ8girwdyYhdxvCj-mEplPUvoeHIgMnGUNsFXTGF3xs5fOtkuWkPglKi7UxSI-XL4eKYLeAYdLmQTA43jP9QULIQG84W99DbmL3KB5t5AarXAQ7bFVBIjz605JU5MDjT9MjFVWsTSmmF6ydVa3VXYhVohLULZU03PpRrcd3V7PAGS3_HstvvauDkQhv5evrS9U78eRewXWE1BDWXh5nQIdAKNxmhCTPOrMXCz3Kwe7_OAjxciYO0FkZY-bh5ZE8pnagOaCTe0BSL7eb1k1y8nvn7bnWizZR4z4hUu0Kd5_BGCaDjJq5cYyC7gVE4PmfKzc_wiGCO41Oz4Z_7TNzOo-oFsZ_EcKCPElOAKfT4qLH3mGQM3cn45po8DcK5e8-ppAN1Y08kAPWUB3k8driLB14hBs09a0mOT6m5InbyIQWxWgqKDeuUXHobCxpbmKIJCq8jHwGZUSsvqI2uwV2Ss3bkdqwZR51Dt1vHwilfTHhSc58o3Cef7S5aZgD51pmG=w1558-h1166-no'
+    # analyze_video()
 
+    # fh = open(_filename, 'wb')
+    # fh.write(base64.b64decode(imageData))
+    # fh.close()
+
+    # img = cv2.imread('./user_image.png')
+    # img = cv2.resize(img, (int(0.7 * img.shape[0]), int(0.7 * img.shape[1])))
+    # cv2.imwrite(_filename, img)
+
+    print("before cloud")
+    pushToCloud('./' + _filename, numPics)
+    print("after cloud")
+
+    faceList = analyze_face(_cloudPath + str(numPics) + '.png', 'prod')
+    emojifiedImage = draw_emoji(_cloudPath + str(numPics) + '.png', faceList)
+
+    # return imageData
 
 def analyze_face(urlImage, mode):
     # # happy
@@ -32,30 +58,42 @@ def analyze_face(urlImage, mode):
     data = None
     params = None
 
-    result = processRequest(json, data, headers, params)
+    result = processRequest(json, _urlImgAPI, data, headers, params)
 
     if result is not None:
         if mode == 'test':
             print("face found")
             print(result)
-            arr = np.asarray(bytearray(requests.get(urlImage).content), dtype=np.uint8)
-            # img = cv2.cvtColor(cv2.imdecode(arr, -1), cv2.COLOR_BGR2RGB)
-            img = cv2.imdecode(arr, -1)
-
-            drawFace(result, img)
-
-            cv2.imshow("", img)
-            cv2.waitKey(0)
+            # arr = np.asarray(bytearray(requests.get(urlImage).content), dtype=np.uint8)
+            # img = cv2.imdecode(arr, -1)
+            # drawFace(result, img)
+            # cv2.imshow("", img)
+            # cv2.waitKey(0)
     else:
         print("face not found")
 
     return result    
 
-def draw_emoji(urlImage, faceList):
-    imgArr = np.asarray(bytearray(requests.get(urlImage).content), 
-                        dtype=np.uint8)
-    img = cv2.imdecode(imgArr, 1)
+def analyze_video():
+    headers = dict()
+    headers['Ocp-Apim-Subscription-Key'] = _key
 
+    json = {}
+    data = None
+    params = dict()
+    params['outputStyle'] = 'aggregate'
+    url = _urlVidAPI + '?outputStyle=aggregate'
+
+    print(url)
+
+    result = processRequest(json, url, data, headers, params)
+
+def draw_emoji(urlImage, faceList):
+    # imgArr = np.asarray(bytearray(requests.get(urlImage).content), 
+    #                     dtype=np.uint8)
+    # img = cv2.imdecode(imgArr, 1)
+
+    img = cv2.imread('./user_image.png')
     b, g, r = cv2.split(img)
     # b = b.astype(np.float)
     # g = g.astype(np.float)
@@ -93,29 +131,17 @@ def draw_emoji(urlImage, faceList):
         for c in range(0,3):
             img[yfrom:yto, xfrom:xto, c] = emoji[:,:,c] * (emoji[:,:,3]/255.0) +  img[yfrom:yto, xfrom:xto, c] * (1.0 - emoji[:,:,3]/255.0)
 
-
-        # # alpha = np.ones((emoji.shape[0],emoji.shape[1])) #* 50
-        # # emojiRGBA = cv2.merge((b,g,r,alpha))
-        # # print("test")
-
-
-
-        # img[xfrom:xto,yfrom:yto] = emoji
-
-        # cv2.imshow("pic", img)
-        # cv2.waitKey(0)
-
-    cv2.imwrite('test.jpg', img)
-
+    cv2.imwrite('result.jpg', img)
+    return img
 
 # Helper functions
-def processRequest(json, data, headers, params):
+def processRequest(json, url, data, headers, params):
     retries = 0
     result = None
 
     while True:
         # get response
-        resp = requests.request('post', _url, 
+        resp = requests.request('post', url=url,
                                     json=json, data=data, 
                                     headers=headers, params=params)
         
@@ -137,6 +163,7 @@ def processRequest(json, data, headers, params):
 
         # successful call
         elif resp.status_code == 200 or resp.status_code == 201:
+            print(resp)
             if lenf in resp.headers and int(resp.headers[lenf]) == 0:
                 result = None
             elif typef in resp.headers and isinstance(resp.headers[typef], str):
@@ -173,21 +200,20 @@ def drawFace(result, img):
                                        cv2.FONT_HERSHEY_SIMPLEX,
                                        0.5, (255,0,0), 1)
 
-def main(urlImage):
-    # print(get_emoji('happiness'))
-    # urlImage = 'https://raw.githubusercontent.com/Microsoft/ProjectOxford-ClientSDK/master/Face/Windows/Data/detection3.jpg'
-    urlImage = 'https://lh3.googleusercontent.com/lfQG0dOFvrE3b27b4OvEX4q6OkO5HKYM01Lzu4_E9nRBtMkMmgjBNQJLt3qXB6tpGgtYp-iC_j1GIGx4JpUVFzBCX-z15aArZm7h2PK8GsHz81uFMZ8girwdyYhdxvCj-mEplPUvoeHIgMnGUNsFXTGF3xs5fOtkuWkPglKi7UxSI-XL4eKYLeAYdLmQTA43jP9QULIQG84W99DbmL3KB5t5AarXAQ7bFVBIjz605JU5MDjT9MjFVWsTSmmF6ydVa3VXYhVohLULZU03PpRrcd3V7PAGS3_HstvvauDkQhv5evrS9U78eRewXWE1BDWXh5nQIdAKNxmhCTPOrMXCz3Kwe7_OAjxciYO0FkZY-bh5ZE8pnagOaCTe0BSL7eb1k1y8nvn7bnWizZR4z4hUu0Kd5_BGCaDjJq5cYyC7gVE4PmfKzc_wiGCO41Oz4Z_7TNzOo-oFsZ_EcKCPElOAKfT4qLH3mGQM3cn45po8DcK5e8-ppAN1Y08kAPWUB3k8driLB14hBs09a0mOT6m5InbyIQWxWgqKDeuUXHobCxpbmKIJCq8jHwGZUSsvqI2uwV2Ss3bkdqwZR51Dt1vHwilfTHhSc58o3Cef7S5aZgD51pmG=w1558-h1166-no'
-    faceList = analyze_face(urlImage, 'prod')
-    draw_emoji(urlImage, faceList)
+def pushToCloud(localPath, numPics):
+    block_blob_service = BlockBlobService(account_name='emojiverse2',
+        account_key='bsLnZdnBz5yppDuprvDNlnWNNLAFl4y6vcOiIz23NozQwLIqJQ12AYkqISdc/WyHVV4HYtGv+Y4b25q2JbmN5A==')
 
-if __name__ == "__main__":
-    main('')
+    block_blob_service.set_container_acl('imgstore', 
+                                         public_access=PublicAccess.Container)
 
+    block_blob_service.create_blob_from_path(
+        'imgstore',
+        'img' + str(numPics) + '.png',
+        _filename,
+        content_settings=ContentSettings(content_type='image/png')
+    )
 
+    return 0
 
-
-
-
-
-
-
+emojify('./input', 0)
