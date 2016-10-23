@@ -31,9 +31,9 @@ def emojify(imageData, numPics):
 
     #----------------IMAGE----------------#
     fh = open(_filename, 'wb')
-    print(type(imageData))
+    # print(type(imageData))
     fh.write(base64.b64decode(imageData))
-    print(base64.b64decode(imageData))
+    # print(base64.b64decode(imageData))
     fh.close()
 
     # img = cv2.imread('./user_image.png')
@@ -41,9 +41,9 @@ def emojify(imageData, numPics):
     # cv2.imwrite(_filename, img)
     # cv2.imshow("img", img)
 
-    print("before cloud")
+    # print("before cloud")
     pushToCloud('./' + _filename, numPics)
-    print("after cloud")
+    # print("after cloud")
 
     faceList = analyze_face(_cloudPath + str(numPics) + '.png', 'prod')
 
@@ -76,7 +76,7 @@ def analyze_face(urlImage, mode):
     if result is not None:
         if mode == 'test':
             print("face found")
-            print(result)
+            # print(result)
 
             # img = cv2.imread(_filename)
             # drawFace(result, img)
@@ -138,24 +138,62 @@ def draw_emoji(urlImage, faceList, numPics):
         emoji = cv2.resize(emoji, (width, height))
 
         yfrom = int(faceRect['top'] - (offset/2))
+        yfrom = max(0, yfrom)
+
         yto   = int(faceRect['top'] + emoji.shape[1] - (offset/2))
+        yto   = min(img.shape[0], yto)
+
+        ydist = yto - yfrom
+
+        yfrom_emj = 0
+        yto_emj = 0
+        if yto == img.shape[0]:
+            yfrom_emj = 0
+            yto_emj = ydist
+        elif yfrom == 0:
+            yfrom_emj = emoji.shape[0]-ydist
+            yto_emj = emoji.shape[0]
+        else:
+            yfrom_emj = 0
+            yto_emj = emoji.shape[0]
+
         xfrom = int(faceRect['left'] - (offset/2))
+        xfrom = max(0, xfrom)
+
         xto   = int(faceRect['left'] + emoji.shape[0] - (offset/2))
+        xto   = min(img.shape[1], xto)
+
+        xdist = xto - xfrom
+
+        xfrom_emj = 0
+        xto_emj = 0
+        if xto == img.shape[1]:
+            xfrom_emj = 0
+            xto_emj = xdist
+        elif xfrom == 0:
+            xfrom_emj = emoji.shape[1]-xdist
+            xto_emj = emoji.shape[1]
+        else:
+            xfrom_emj = 0
+            xto_emj = emoji.shape[1]
+
+        print("yto-yfrom", yto-yfrom, "xto-xfrom", xto-xfrom)
+        print("yto_emj-yfrom_emj", yto_emj-yfrom_emj, "xto_emj-xfrom_emj", xto_emj-xfrom_emj)
 
         for c in range(0,3):
-            img[yfrom:yto, xfrom:xto, c] = emoji[:,:,c] * (emoji[:,:,3]/255.0) +  img[yfrom:yto, xfrom:xto, c] * (1.0 - emoji[:,:,3]/255.0)
+            img[yfrom:yto,xfrom:xto,c] = emoji[yfrom_emj:yto_emj,xfrom_emj:xto_emj,c] * (emoji[yfrom_emj:yto_emj,xfrom_emj:xto_emj,3]/255.0) + img[yfrom:yto,xfrom:xto,c] * (1.0 - emoji[yfrom_emj:yto_emj,xfrom_emj:xto_emj,3]/255.0)
 
     cv2.imwrite('result.jpg', img)
 
     #-------------------NEW
-    print("before cloud")
+    # print("before cloud")
     block_blob_service.create_blob_from_path(
         'imgstore',
         'img' + str(numPics) + '.jpg',
         'result.jpg',
         content_settings=ContentSettings(content_type='image/jpg')
     )
-    print("after cloud")
+    # print("after cloud")
     return ('https://emojiverse2.blob.core.windows.net/imgstore/img' + str(numPics) + '.jpg')
 
     #------------------OLD
@@ -192,7 +230,6 @@ def processImgRequest(json, url, data, headers, params):
 
         # successful call
         elif resp.status_code == 200 or resp.status_code == 201:
-            print(resp)
             if lenf in resp.headers and int(resp.headers[lenf]) == 0:
                 result = None
             elif typef in resp.headers and isinstance(resp.headers[typef], str):
