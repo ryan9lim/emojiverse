@@ -11,5 +11,5 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
 
     <string name="title_activity_image">ImageActivity</string>
-    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_main">Emojiverse</string>
 </resources>
